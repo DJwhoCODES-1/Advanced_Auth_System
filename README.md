@@ -20,6 +20,26 @@ This project demonstrates an advanced approach to authentication and authorizati
 
 ---
 
+## 🛡️ NoSQL Injection
+
+NoSQL injection happens when untrusted user input is inserted directly into NoSQL queries (e.g., MongoDB) and an attacker manipulates operators like `$ne`, `$gt`, `$or`, or `$where` to alter query logic.
+
+**Vulnerable example (do not use):**
+
+```js
+// Example attacker-friendly query pattern
+db["merchants"].findOne({ email: { $ne: null }, otp: { $ne: null } })
+
+❌ Never pass raw request objects into DB queries.
+
+const email = String(req.body.email || '').trim();
+const otp = String(req.body.otp || '').trim();
+const merchant = await merchants.findOne({ email, otp });
+
+```
+
+---
+
 ## 🧱 Tech Stack (Example)
 
 > _(Adjust this section according to your implementation)_

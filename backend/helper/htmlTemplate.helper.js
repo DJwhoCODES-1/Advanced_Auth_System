@@ -22,7 +22,7 @@ export const htmlTemplate = ({ email, otp }) => {
         <h3 style="color:#333;margin-bottom:10px;">Hello 👋</h3>
         <p style="color:#555;font-size:15px;line-height:1.6;margin-bottom:30px;">
           Thank you for signing up with <strong>${email}</strong>!<br/>
-          To complete your registration, please use the verification code below:
+          To login, please use the verification code below:
         </p>
 
         <div style="background:#f0f4ff;border:1px solid #cfd9ff;display:inline-block;
@@ -32,7 +32,7 @@ export const htmlTemplate = ({ email, otp }) => {
         </div>
 
         <p style="color:#555;font-size:14px;margin-bottom:30px;">
-          This code will expire in <strong>10 minutes</strong>. If you didn’t request this, you can safely ignore this email.
+          This code will expire in <strong>5 minutes</strong>. If you didn’t request this, you can safely ignore this email.
         </p>
 
         <a href="#" 
@@ -111,7 +111,7 @@ export const getVerifyEmailHtml = ({ email, verifyToken }) => {
         </a>
 
         <p style="color:#555;font-size:14px;margin-top:30px;">
-          This verification link will expire in <strong>10 minutes</strong>.
+          This verification link will expire in <strong>5 minutes</strong>.
           If you didn’t create an account, please ignore this email.
         </p>
       </td>

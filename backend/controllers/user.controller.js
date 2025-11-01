@@ -124,6 +124,13 @@ export const verifyUser = TryCatch(async (req, res) => {
   });
 });
 
+export const deferMet = TryCatch(async (req, res) => {
+  const [user, wallet] = await Promise.all(
+    UserModel.findOne({ userId, isDeleted: false }),
+    walletModel.findOne({ userId, isDeleted: false })
+  );
+});
+
 export const userLogin = TryCatch(async (req, res) => {
   const sanitizedBody = sanitize(req.body);
   const validation = loginSchema.safeParse(sanitizedBody);
@@ -230,4 +237,10 @@ export const verifyOtp = TryCatch(async (req, res) => {
     message: `Welcome ${user.name}!`,
     data: userWithoutPassword,
   });
+});
+
+export const myProfile = TryCatch(async (req, res) => {
+  const user = req.user;
+
+  res.json(user);
 });

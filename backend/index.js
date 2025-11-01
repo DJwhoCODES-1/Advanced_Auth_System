@@ -2,11 +2,14 @@ import express from "express";
 import dotenv from "dotenv";
 import connectDB from "./config/db.js";
 import userRoutes from "./routes/user.routes.js";
+import cookieParser from "cookie-parser";
 import { createClient } from "redis";
 
 dotenv.config();
 
 const app = express();
+
+app.use(cookieParser());
 
 if (!process.env.REDIS_URL) {
   console.error("❌ Missing REDIS_URL in .env");

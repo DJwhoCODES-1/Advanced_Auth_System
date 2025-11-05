@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import connectDB from "./config/db.js";
 import userRoutes from "./routes/user.routes.js";
 import cookieParser from "cookie-parser";
+import cors from "cors";
 import { createClient } from "redis";
 
 dotenv.config();
@@ -10,6 +11,16 @@ dotenv.config();
 const app = express();
 
 app.use(cookieParser());
+app.use(express.json());
+
+const corsOptions = {
+  origin: "*",
+  credentials: true,
+  methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+};
+app.use(cors(corsOptions));
+
+app.use("/api/v1", userRoutes);
 
 if (!process.env.REDIS_URL) {
   console.error("❌ Missing REDIS_URL in .env");
@@ -33,9 +44,6 @@ const startServer = async () => {
 
     await redisClient.connect();
     console.log("✅ Connected to Redis!");
-
-    app.use(express.json());
-    app.use("/api/v1", userRoutes);
 
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

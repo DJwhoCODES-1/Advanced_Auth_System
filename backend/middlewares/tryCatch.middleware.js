@@ -3,9 +3,15 @@ const TryCatch = (handler) => {
     try {
       await handler(req, res, next);
     } catch (error) {
-      res.status(500).json({
-        message: error.message,
-      });
+      console.error("Error in handler:", error);
+
+      if (!res.headersSent) {
+        res.status(500).json({
+          message: error.message || "Internal Server Error",
+        });
+      } else {
+        res.end();
+      }
     }
   };
 };

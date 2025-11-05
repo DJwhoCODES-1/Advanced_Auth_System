@@ -10,7 +10,13 @@ import {
   getVerifyEmailHtml,
   htmlTemplate,
 } from "../helper/htmlTemplate.helper.js";
-import { generateToken } from "../config/generateToken.js";
+import {
+  generateAccessToken,
+  generateToken,
+  revokeRefreshToken,
+  verifyRefreshToken,
+} from "../config/generateToken.js";
+import { generateCSRFToken } from "../config/csrfMiddleware.js";
 
 export const registerUser = TryCatch(async (req, res) => {
   const sanitizedBody = sanitize(req.body);
@@ -122,13 +128,6 @@ export const verifyUser = TryCatch(async (req, res) => {
       role: newUser.role,
     },
   });
-});
-
-export const deferMet = TryCatch(async (req, res) => {
-  const [user, wallet] = await Promise.all(
-    UserModel.findOne({ userId, isDeleted: false }),
-    walletModel.findOne({ userId, isDeleted: false })
-  );
 });
 
 export const userLogin = TryCatch(async (req, res) => {
@@ -243,4 +242,50 @@ export const myProfile = TryCatch(async (req, res) => {
   const user = req.user;
 
   res.json(user);
+});
+
+export const refreshToken = TryCatch(async (req, res) => {
+  const refreshToken = req?.cookies?.refreshToken;
+
+  if (!refreshToken) {
+    return res.status(403).json({ message: "Please login!" });
+  }
+
+  const decode = await verifyRefreshToken(refreshToken);
+
+  if (!decode) {
+    return res.status(401).json({
+      message: "Invalid refresh token",
+    });
+  }
+
+  generateAccessToken(decode.userId, res);
+
+  res.status(200).json({
+    message: "Token refreshed!",
+  });
+});
+
+export const logoutUser = TryCatch(async (req, res) => {
+  const userId = req.user._id;
+
+  await revokeRefreshToken(userId);
+  res.clearCookie("refreshToken");
+  res.clearCookie("accessToken");
+  res.clearCookie("csrfToken");
+
+  await redisClient.del(`user_${userId}`);
+
+  res.json({ message: "Looged out successfully!" });
+});
+
+export const refreshCSRF = TryCatch(async (req, res) => {
+  const userId = req.user._id;
+
+  const newCSRFToken = await generateCSRFToken(userId, res);
+
+  res.json({
+    message: "CSRF Token refreshed successfully!",
+    csrfToken: newCSRFToken,
+  });
 });

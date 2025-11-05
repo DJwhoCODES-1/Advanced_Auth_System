@@ -16,7 +16,7 @@ import {
   revokeRefreshToken,
   verifyRefreshToken,
 } from "../config/generateToken.js";
-import { generateCSRFToken } from "../config/csrfMiddleware.js";
+import { generateCSRFSeed } from "../config/csrfMiddleware.js";
 
 export const registerUser = TryCatch(async (req, res) => {
   const sanitizedBody = sanitize(req.body);
@@ -25,102 +25,64 @@ export const registerUser = TryCatch(async (req, res) => {
   if (!validation.success) {
     const raw = validation.error;
     const parsed = JSON.parse(raw.message);
-    let errors = [];
-    if (parsed) {
-      errors = parsed.map((err) => ({
-        path: err.path[0],
-        message: err.message || "Invalid input",
-        code: err.code,
-      }));
-    }
-
-    return res.status(400).json({
-      message: "validation error",
-      errors,
-    });
+    const errors = parsed.map((err) => ({
+      path: err.path[0],
+      message: err.message || "Invalid input",
+      code: err.code,
+    }));
+    return res.status(400).json({ message: "validation error", errors });
   }
 
   const { name, email, password } = validation.data;
-
   const rateLimitKey = `registerRateLimit_${req.ip}_${email}`;
 
-  if (await redisClient.get(rateLimitKey)) {
+  if (await redisClient.get(rateLimitKey))
     return res
       .status(429)
       .json({ message: "Too many requests, try again later!" });
-  }
 
   const existingUser = await UserModel.findOne({ email });
-
-  if (existingUser) {
-    return res.status(400).json({
-      message: "User already exists!",
-    });
-  }
+  if (existingUser)
+    return res.status(400).json({ message: "User already exists!" });
 
   const hashPassword = await bcrypt.hash(password, 10);
-
   const verifyToken = crypto.randomBytes(32).toString("hex");
-
   const verifyKey = `verify:${verifyToken}`;
 
-  const redisPayload = JSON.stringify({
-    name,
-    email,
-    password: hashPassword,
-  });
-
+  const redisPayload = JSON.stringify({ name, email, password: hashPassword });
   await redisClient.set(verifyKey, redisPayload, { EX: 300 });
 
-  const subject = "verify your email for account creation";
-
+  const subject = "Verify your email for account creation";
   const html = getVerifyEmailHtml({ email, verifyToken });
-
   await sendMail({ email, subject, html });
-
   await redisClient.set(rateLimitKey, "true", { EX: 60 });
 
   res.json({
-    message:
-      "Verification code has been sent to to your mail. Valid for 5 mins!",
+    message: "Verification link sent to your email. Valid for 5 mins!",
   });
 });
 
 export const verifyUser = TryCatch(async (req, res) => {
   const { token } = req.params;
-
-  if (!token) {
-    return res.status(404).json({
-      message: "Verification token is required!",
-    });
-  }
+  if (!token)
+    return res.status(404).json({ message: "Verification token required!" });
 
   const verifyKey = `verify:${token}`;
-
   const userDataJson = await redisClient.get(verifyKey);
-
-  if (!userDataJson) {
-    return res.status(404).json({
-      message: "Verification link is expired!",
-    });
-  }
+  if (!userDataJson)
+    return res.status(404).json({ message: "Verification link expired!" });
 
   await redisClient.del(verifyKey);
-
   const userData = JSON.parse(userDataJson);
 
   const existingUser = await UserModel.findOne({ email: userData.email });
-
-  if (existingUser) {
-    return res.status(400).json({
-      message: "User already exists!",
-    });
-  }
+  if (existingUser)
+    return res.status(400).json({ message: "User already exists!" });
 
   const newUser = await UserModel.create({ ...userData, role: "user" });
 
   res.status(201).json({
-    message: "Email verified successfully! Your account has been created.",
+    message: "Email verified successfully! Account created.",
     user: {
       _id: newUser._id,
       name: newUser.name,
@@ -137,101 +99,66 @@ export const userLogin = TryCatch(async (req, res) => {
   if (!validation.success) {
     const raw = validation.error;
     const parsed = JSON.parse(raw.message);
-    let errors = [];
-    if (parsed) {
-      errors = parsed.map((err) => ({
-        path: err.path[0],
-        message: err.message || "Invalid input",
-        code: err.code,
-      }));
-    }
-
-    return res.status(400).json({
-      message: "validation error",
-      errors,
-    });
+    const errors = parsed.map((err) => ({
+      path: err.path[0],
+      message: err.message || "Invalid input",
+      code: err.code,
+    }));
+    return res.status(400).json({ message: "validation error", errors });
   }
 
   const { email, password } = validation.data;
-
   const rateLimitKey = `loginRateLimit_${req.ip}_${email}`;
 
-  if (await redisClient.get(rateLimitKey)) {
+  if (await redisClient.get(rateLimitKey))
     return res
       .status(429)
       .json({ message: "Too many requests, try again later!" });
-  }
 
   const user = await UserModel.findOne({ email });
-
-  if (!user) {
-    return res.status(404).json({
-      message: "Invalid credentials!",
-    });
-  }
+  if (!user) return res.status(404).json({ message: "Invalid credentials!" });
 
   const comparePassword = await bcrypt.compare(password, user.password);
-
-  if (!comparePassword) {
-    return res.status(404).json({
-      message: "Invalid credentials!",
-    });
-  }
+  if (!comparePassword)
+    return res.status(404).json({ message: "Invalid credentials!" });
 
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
   const otpKey = `otp_${email}`;
-
   await redisClient.set(otpKey, JSON.stringify(otp), { EX: 300 });
 
-  const subject = "OTP for verifications!";
-
+  const subject = "OTP for verification!";
   const html = htmlTemplate({ email, otp });
-
   await sendMail({ email, subject, html });
-
   await redisClient.set(rateLimitKey, "true", { EX: 60 });
 
   res.json({
-    message: "An OTP is sent on your registered mail address. Valid for 5mins.",
+    message: "An OTP has been sent to your registered email. Valid for 5 mins.",
   });
 });
 
 export const verifyOtp = TryCatch(async (req, res) => {
   const { email, otp } = req.body;
-
-  if (!email || !otp) {
-    return res.status(404).json({
-      message: "Please provide all details!",
-    });
-  }
+  if (!email || !otp)
+    return res.status(404).json({ message: "Please provide all details!" });
 
   const otpKey = `otp_${email}`;
-
   const storedOtpString = await redisClient.get(otpKey);
-
-  if (!storedOtpString) {
-    return res.status(400).json({
-      message: "OTP Expired!",
-    });
-  }
+  if (!storedOtpString)
+    return res.status(400).json({ message: "OTP expired!" });
 
   const storedOtp = JSON.parse(storedOtpString);
-
-  if (storedOtp !== otp) {
-    return res.status(400).json({
-      message: "Invalid OTP",
-    });
-  }
+  if (storedOtp !== otp)
+    return res.status(400).json({ message: "Invalid OTP" });
 
   await redisClient.del(otpKey);
 
   let user = await UserModel.findOne({ email }).lean();
+  if (!user) return res.status(404).json({ message: "User not found!" });
 
-  const tokenData = await generateToken({ userId: user._id, res });
+  await generateToken({ userId: user._id, res });
+  await generateCSRFSeed(user._id, res);
 
   const { password, ...userWithoutPassword } = user;
-
   res.status(200).json({
     message: `Welcome ${user.name}!`,
     data: userWithoutPassword,
@@ -239,53 +166,30 @@ export const verifyOtp = TryCatch(async (req, res) => {
 });
 
 export const myProfile = TryCatch(async (req, res) => {
-  const user = req.user;
-
-  res.json(user);
+  res.json(req.user);
 });
 
 export const refreshToken = TryCatch(async (req, res) => {
   const refreshToken = req?.cookies?.refreshToken;
-
-  if (!refreshToken) {
-    return res.status(403).json({ message: "Please login!" });
-  }
+  if (!refreshToken) return res.status(403).json({ message: "Please login!" });
 
   const decode = await verifyRefreshToken(refreshToken);
-
-  if (!decode) {
-    return res.status(401).json({
-      message: "Invalid refresh token",
-    });
-  }
+  if (!decode)
+    return res.status(401).json({ message: "Invalid refresh token" });
 
   generateAccessToken(decode.userId, res);
-
-  res.status(200).json({
-    message: "Token refreshed!",
-  });
+  res.status(200).json({ message: "Token refreshed!" });
 });
 
 export const logoutUser = TryCatch(async (req, res) => {
   const userId = req.user._id;
-
   await revokeRefreshToken(userId);
+  await redisClient.del(`user_${userId}`);
+  await redisClient.del(`csrf_seed_${userId}`);
+
   res.clearCookie("refreshToken");
   res.clearCookie("accessToken");
-  res.clearCookie("csrfToken");
+  res.clearCookie("csrf_seed");
 
-  await redisClient.del(`user_${userId}`);
-
-  res.json({ message: "Looged out successfully!" });
-});
-
-export const refreshCSRF = TryCatch(async (req, res) => {
-  const userId = req.user._id;
-
-  const newCSRFToken = await generateCSRFToken(userId, res);
-
-  res.json({
-    message: "CSRF Token refreshed successfully!",
-    csrfToken: newCSRFToken,
-  });
+  res.json({ message: "Logged out successfully!" });
 });

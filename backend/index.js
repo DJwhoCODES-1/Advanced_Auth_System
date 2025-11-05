@@ -7,7 +7,6 @@ import cors from "cors";
 import { createClient } from "redis";
 
 dotenv.config();
-
 const app = express();
 
 app.use(cookieParser());

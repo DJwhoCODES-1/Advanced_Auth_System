@@ -10,7 +10,7 @@ export const generateCSRFSeed = async (userId, res) => {
   res.cookie("csrf_seed", seed, {
     httpOnly: true,
     sameSite: "none",
-    secure: true,
+    secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: 5 * 60 * 1000,
   });

@@ -155,18 +155,39 @@ export const verifyOtp = TryCatch(async (req, res) => {
   let user = await UserModel.findOne({ email }).lean();
   if (!user) return res.status(404).json({ message: "User not found!" });
 
-  await generateToken({ userId: user._id, res });
+  const tokenData = await generateToken({ userId: user._id, res });
   await generateCSRFSeed(user._id, res);
 
   const { password, ...userWithoutPassword } = user;
   res.status(200).json({
     message: `Welcome ${user.name}!`,
     data: userWithoutPassword,
+    sessionInfo: {
+      sessionId: tokenData.sessionId,
+      loginTime: new Date().toISOString(),
+    },
   });
 });
 
 export const myProfile = TryCatch(async (req, res) => {
-  res.json(req.user);
+  const user = req.user;
+
+  const sessionId = req.sessionId;
+
+  const sessionData = await redisClient.get(`session_${sessionId}`);
+
+  let sessionInfo = null;
+
+  if (sessionData) {
+    const parsedSession = JSON.parse(sessionData);
+    sessionInfo = {
+      sessionId,
+      loginTime: parsedSession.createdAt,
+      lastActivity: parsedSession.lastActivity,
+    };
+  }
+
+  res.json({ user, sessionInfo });
 });
 
 export const refreshToken = TryCatch(async (req, res) => {
@@ -174,10 +195,14 @@ export const refreshToken = TryCatch(async (req, res) => {
   if (!refreshToken) return res.status(403).json({ message: "Please login!" });
 
   const decode = await verifyRefreshToken(refreshToken);
-  if (!decode)
-    return res.status(401).json({ message: "Invalid refresh token" });
+  if (!decode) {
+    res.clearCookie("refreshToken");
+    res.clearCookie("accessToken");
+    res.clearCookie("csrf_seed");
+    return res.status(401).json({ message: "Session Expired! Please login" });
+  }
 
-  generateAccessToken(decode.userId, res);
+  generateAccessToken(decode.userId, decode.sessionId, res);
   res.status(200).json({ message: "Token refreshed!" });
 });
 

@@ -58,84 +58,76 @@ if (requestOrigin !== process.env.FRONTEND_URL) {
 
 This blocks all browser-originated requests from untrusted domains — even if the cookies are attached.
 
-✅ Result:
+✅ **Result:**  
 Even if a user visits a malicious site, their browser cannot forge a valid CSRF token, and requests from untrusted origins are rejected outright.
 
-🧱 NoSQL Injection
+---
 
-NoSQL injection happens when untrusted user input is inserted directly into NoSQL queries (e.g., MongoDB) and an attacker manipulates operators like $ne, $gt, $or, or $where to alter query logic.
+## 🧱 NoSQL Injection
 
-Vulnerable example (do not use):
+NoSQL injection happens when untrusted user input is inserted directly into NoSQL queries (e.g., MongoDB) and an attacker manipulates operators like `$ne`, `$gt`, `$or`, or `$where` to alter query logic.
 
+**❌ Vulnerable Example (Do Not Use):**
+
+```js
 db["merchants"].findOne({ email: { $ne: null }, otp: { $ne: null } });
+```
 
-✅ Safe Approach:
+**✅ Safe Approach:**
 
-const email = String(req.body.email || '').trim();
-const otp = String(req.body.otp || '').trim();
+```js
+const email = String(req.body.email || "").trim();
+const otp = String(req.body.otp || "").trim();
 const merchant = await merchants.findOne({ email, otp });
+```
 
-🧱 Tech Stack
+---
 
-Backend: Node.js / Express
+## 🧱 Tech Stack
 
-Database: MongoDB (NoSQL)
+- **Backend:** Node.js / Express
+- **Database:** MongoDB (NoSQL)
+- **Cache & Rate Limiting:** Redis
+- **Authentication:** JWT (Access & Refresh Tokens)
+- **Email Service:** Nodemailer / AWS SES / SendGrid
 
-Cache & Rate Limiting: Redis
+---
 
-Authentication: JWT (Access & Refresh Tokens)
+## 🔄 Authentication Flow
 
-Email Service: Nodemailer / AWS SES / SendGrid
+1. **User Registration** — Email verification via signed, time-limited link.
+2. **Login** — Credentials validated → OTP sent for 2FA.
+3. **OTP Verification** — Upon success → Access, Refresh, and CSRF secret issued.
+4. **CSRF Token Fetch** — Frontend requests a CSRF token using the secret cookie.
+5. **Protected Requests** — Frontend includes the token in headers; server validates.
+6. **Logout** — Session invalidated and all tokens (including CSRF) revoked.
 
-🔄 Authentication Flow
+---
 
-User Registration
+## 🧰 Setup & Installation
 
-Email verification via signed, time-limited link.
-
-Login
-
-Credentials validated → OTP sent for 2FA.
-
-OTP Verification
-
-Upon success → Access, Refresh, and CSRF secret issued.
-
-CSRF Token Fetch
-
-Frontend requests a CSRF token using the secret cookie.
-
-Protected Requests
-
-Frontend includes the token in headers; server validates.
-
-Logout
-
-Session invalidated and all tokens (including CSRF) revoked.
-
-🧰 Setup & Installation
-
+```bash
 # Clone the repository
-
 git clone https://github.com/yourusername/Advanced_Auth_System.git
 
 # Navigate into the project
-
 cd Advanced_Auth_System
 
 # Install dependencies
-
 npm install
 
 # Create environment configuration
-
 cp .env.example .env
 
 # Start the development server
-
 npm run dev
+```
 
-🧩 Environment Variables Example
+---
+
+## 🧩 Environment Variables Example
+
+```bash
 PORT=5000
 MONGO_URL=mongodb+srv://...
 REDIS_URL=redis://localhost:6379
@@ -143,10 +135,10 @@ JWT_ACCESS_SECRET=your_access_secret
 JWT_REFRESH_SECRET=your_refresh_secret
 SERVER_CSRF_SECRET=your_csrf_signing_secret
 FRONTEND_URL=https://your-frontend-domain.com
-
 ```
 
-📖 License
+---
 
-DJwhoCODES © 2025 — Advanced Auth System
-```
+## 📖 License
+
+**DJwhoCODES © 2025 — Advanced Auth System**

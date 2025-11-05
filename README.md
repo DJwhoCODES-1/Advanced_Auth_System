@@ -54,6 +54,8 @@ const requestOrigin = req.get("origin");
 if (requestOrigin !== process.env.FRONTEND_URL) {
   return res.status(403).json({ message: "Invalid request origin." });
 }
+```
+
 This blocks all browser-originated requests from untrusted domains — even if the cookies are attached.
 
 ✅ Result:
@@ -66,7 +68,6 @@ NoSQL injection happens when untrusted user input is inserted directly into NoSQ
 Vulnerable example (do not use):
 
 db["merchants"].findOne({ email: { $ne: null }, otp: { $ne: null } });
-
 
 ✅ Safe Approach:
 
@@ -113,19 +114,25 @@ Logout
 Session invalidated and all tokens (including CSRF) revoked.
 
 🧰 Setup & Installation
+
 # Clone the repository
+
 git clone https://github.com/yourusername/Advanced_Auth_System.git
 
 # Navigate into the project
+
 cd Advanced_Auth_System
 
 # Install dependencies
+
 npm install
 
 # Create environment configuration
+
 cp .env.example .env
 
 # Start the development server
+
 npm run dev
 
 🧩 Environment Variables Example
@@ -136,8 +143,10 @@ JWT_ACCESS_SECRET=your_access_secret
 JWT_REFRESH_SECRET=your_refresh_secret
 SERVER_CSRF_SECRET=your_csrf_signing_secret
 FRONTEND_URL=https://your-frontend-domain.com
+
 ```
 
 📖 License
 
 DJwhoCODES © 2025 — Advanced Auth System
+```
